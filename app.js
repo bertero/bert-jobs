@@ -14,12 +14,14 @@ var numPagesVisited    = 0;
 var pagesToVisit       = [];
 var url                = new URL(START_URL);
 var baseUrl            = url.protocol + "//" + url.hostname;
+var buyingPrice        = 0.59
+var stockQuantity      = 15200
 
 console.log('Bert Jobs initialized!')
 
 pagesToVisit.push(START_URL);
 
-cronFunctions.jobH('0 0 9-18 * * *', crawl)
+cronFunctions.jobH('0 30 10-18 * * *', crawl)
 // crawl()
 
 function crawl() {
@@ -50,12 +52,18 @@ function visitPage(url) {
         stockParams.percentageVariation = '-' + stockParams.percentageVariation
         stockParams.priceVariation      = '-' + stockParams.priceVariation
       }
+      var message = 'Cotação atualizada:' + strftime("%k", new Date()) + 'h\n\n' + JSON.stringify(stockParams, null, 2)
+      message    += '\n\nBuying Price: R$ ' + buyingPrice + '\nStock Quantity: ' + stockQuantity
+      message    += '\nStarting Investment Value: R$ ' + (stockQuantity * buyingPrice).toFixed(2)
+      message    += '\nStarting Investment Value per Person: R$ ' + (stockQuantity * buyingPrice / 3).toFixed(2)
+      message    += '\nActual Investment Value: R$ ' + (stockQuantity * priceNow).toFixed(2)
+      message    += '\nActual Investment Value per Person: R$ ' + (stockQuantity * priceNow / 3).toFixed(2)
 
       var data = {
        from: 'Default User <postmaster@sandboxc746da069aca49db8e6b10a583928903.mailgun.org>',
-       to: 'guilherme.bertero@gmail.com',
+       to: ['guilherme.bertero@gmail.com', 'dprs.gvmun@gmail.com'],
        subject: 'Atualização Cotação PETRE46 - ' + strftime("%Y-%m-%d", new Date()),
-       text: 'Cotação atualizada:' + strftime("%k", new Date()) + 'h\n\n' + JSON.stringify(stockParams, null, 2)
+       text: message
       }
 
       mailgun.messages().send(data, function (error, body) {
