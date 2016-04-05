@@ -25,6 +25,7 @@ cronFunctions.jobH('0 30 10-18 * * *', crawl)
 // crawl()
 
 function crawl() {
+  console.log('Stock Quotes Update has started!')
   visitPage(START_URL);
 }
 
@@ -58,6 +59,7 @@ function visitPage(url) {
       message    += '\nStarting Investment Value per Person: R$ ' + (stockQuantity * buyingPrice / 3).toFixed(2)
       message    += '\nActual Investment Value: R$ ' + (stockQuantity * priceNow).toFixed(2)
       message    += '\nActual Investment Value per Person: R$ ' + (stockQuantity * priceNow / 3).toFixed(2)
+      message    += '\nInvestment Return: ' + (100 * priceNow / buyingPrice - 100).toFixed(3) + '%'
 
       var data = {
        from: 'Default User <postmaster@sandboxc746da069aca49db8e6b10a583928903.mailgun.org>',
@@ -65,7 +67,7 @@ function visitPage(url) {
        subject: 'Atualização Cotação PETRE46 - ' + strftime("%Y-%m-%d", new Date()),
        text: message
       }
-
+      // console.log(message)
       mailgun.messages().send(data, function (error, body) {
       if(error){
         console.log(error)
@@ -95,7 +97,7 @@ function searchForWord($, word) {
     stockParams[resultsArray[index]] = resultsArray[index + 1]
   }
   // resultString = resultString.substring(brlIndex - 3, resultString.length)
-  console.log(stockParams)
+  // console.log(stockParams)
   // console.log(bodyText)
 
   return {isWordFound : (bodyText.indexOf(word.toLowerCase()) !== -1), params : stockParams}
