@@ -1,38 +1,32 @@
-var request = require('request');
-var cheerio = require('cheerio');
-var URL = require('url-parse');
-var u = require('underscore')
+var request            = require('request')
+var cheerio            = require('cheerio')
+var URL                = require('url-parse')
+var u                  = require('underscore')
+var strftime           = require('strftime')
+var api_key            = 'key-7ad8eebeaea3a30d05ae433e507fbb11'
+var domain             = 'sandboxc746da069aca49db8e6b10a583928903.mailgun.org'
+var mailgun            = require('mailgun-js')({apiKey: api_key, domain: domain})
+var cronFunctions      = require('./job')
+var START_URL          = "http://www.bloomberg.com/quote/PETRE46:BZ";
+var SEARCH_WORD        = ("previous close").toLowerCase()
+var pagesVisited       = {};
+var numPagesVisited    = 0;
+var pagesToVisit       = [];
+var url                = new URL(START_URL);
+var baseUrl            = url.protocol + "//" + url.hostname;
 
-var START_URL = "http://www.bloomberg.com/quote/PETRE46:BZ";
-// var SEARCH_WORD = ("before it's here, it's on the bloomberg terminal").toLowerCase()
-var SEARCH_WORD = ("previous close").toLowerCase()
-var MAX_PAGES_TO_VISIT = 10;
-
-var pagesVisited = {};
-var numPagesVisited = 0;
-var pagesToVisit = [];
-var url = new URL(START_URL);
-var baseUrl = url.protocol + "//" + url.hostname;
+console.log('Bert Jobs initialized!')
 
 pagesToVisit.push(START_URL);
-crawl();
+
+cronFunctions.jobH('0 0 9-18 * * *', crawl)
+// crawl()
 
 function crawl() {
-  if(numPagesVisited >= MAX_PAGES_TO_VISIT) {
-    console.log("Reached max limit of number of pages to visit.");
-    return;
-  }
-  var nextPage = pagesToVisit.pop();
-  if (nextPage in pagesVisited) {
-    // We've already visited this page, so repeat the crawl
-    crawl();
-  } else {
-    // New page we haven't visited
-    visitPage(nextPage, crawl);
-  }
+  visitPage(START_URL);
 }
 
-function visitPage(url, callback) {
+function visitPage(url) {
   // Add page to our set
   pagesVisited[url] = true;
   numPagesVisited++;
@@ -40,22 +34,38 @@ function visitPage(url, callback) {
   // Make the request
   console.log("Visiting page " + url);
   request(url, function(error, response, body) {
-     // Check status code (200 is HTTP OK)
-     console.log("Status code: " + response.statusCode);
-     if(response.statusCode !== 200) {
-       callback();
-       return;
-     }
-     // Parse the document body
-     var $ = cheerio.load(body);
-     var isWordFound = searchForWord($, SEARCH_WORD);
-     if(isWordFound) {
-       console.log('Word ' + SEARCH_WORD + ' found at page ' + url);
-     } else {
-       // collectInternalLinks($);
-       // In this short program, our callback is just calling crawl()
-       callback();
-     }
+    // Check status code (200 is HTTP OK)
+    console.log("Status code: " + response.statusCode);
+    if(response.statusCode !== 200) {
+     return;
+    }
+    // Parse the document body
+    var $ = cheerio.load(body);
+    var searchResults = searchForWord($, SEARCH_WORD);
+    if(searchResults.isWordFound) {
+      console.log('Word ' + SEARCH_WORD + ' found at page ' + url);
+      var stockParams = searchResults.params
+      var priceNow = Number(stockParams.priceNow.split('b')[0])
+      if(priceNow < Number(stockParams.open)){
+        stockParams.percentageVariation = '-' + stockParams.percentageVariation
+        stockParams.priceVariation      = '-' + stockParams.priceVariation
+      }
+
+      var data = {
+       from: 'Default User <postmaster@sandboxc746da069aca49db8e6b10a583928903.mailgun.org>',
+       to: 'guilherme.bertero@gmail.com',
+       subject: 'Atualização Cotação PETRE46 - ' + strftime("%Y-%m-%d", new Date()),
+       text: 'Cotação atualizada:' + strftime("%k", new Date()) + 'h\n\n' + JSON.stringify(stockParams, null, 2)
+      }
+
+      mailgun.messages().send(data, function (error, body) {
+      if(error){
+        console.log(error)
+        console.log(body)
+      }
+      else console.log('Message ' + body.message)
+      });
+    }
   });
 }
 
@@ -67,10 +77,11 @@ function searchForWord($, word) {
   resultString = resultString.replace(/ /g, '')
   resultString = resultString.replace(/,/g, '')
   resultsArray = u.compact(resultString.split('\n'))
+
   var stockParams = {
     priceNow : resultsArray[0],
-    priceVariation : resultString[1],
-    percentageVariation : resultString[2]
+    priceVariation : Number(resultsArray[1]),
+    percentageVariation : resultsArray[2]
   }
   for(var index = 3; index < resultsArray.length; index += 2){
     stockParams[resultsArray[index]] = resultsArray[index + 1]
@@ -79,7 +90,7 @@ function searchForWord($, word) {
   console.log(stockParams)
   // console.log(bodyText)
 
-  return(bodyText.indexOf(word.toLowerCase()) !== -1);
+  return {isWordFound : (bodyText.indexOf(word.toLowerCase()) !== -1), params : stockParams}
 }
 
 function collectInternalLinks($) {
@@ -88,4 +99,8 @@ function collectInternalLinks($) {
     relativeLinks.each(function() {
         pagesToVisit.push(baseUrl + $(this).attr('href'));
     });
+}
+
+function sendMail() {
+
 }

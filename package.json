@@ -6,9 +6,12 @@
   "author": "Stephen",
   "license": "ISC",
   "dependencies": {
-    "cheerio": "^0.19.0",
-    "request": "^2.65.0",
+    "cheerio": "^0.20.0",
+    "cron": "^1.1.0",
+    "mailgun-js": "^0.7.7",
+    "request": "^2.69.0",
+    "strftime": "^0.9.2",
     "underscore": "^1.8.3",
-    "url-parse": "^1.0.5"
+    "url-parser": "0.0.1"
   }
 }
