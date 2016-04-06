@@ -27,7 +27,8 @@ function webCrawlerHourly () {
 
 function webCrawler(stocks, isHourly) {
   console.log('Stock Quotes Update has started!')
-  var message = ''
+  var message = 'Cotação atualizada:' + strftime("%k", new Date()) + 'h\n\n'
+  var mailTo  = isHourly ? ['guilherme.bertero@gmail.com', 'dprs.gvmun@gmail.com'] : ['guilherme.bertero@gmail.com']
 
   async.each(Object.keys(stocks), function(stock, cb){
     var url = "http://www.bloomberg.com/quote/" + stock + ":BZ"
@@ -49,7 +50,7 @@ function webCrawler(stocks, isHourly) {
           stockParams.percentageVariation = '-' + stockParams.percentageVariation
           stockParams.priceVariation      = '-' + stockParams.priceVariation
         }
-        message += 'Cotação atualizada:' + strftime("%k", new Date()) + 'h\n\n' + JSON.stringify(stockParams, null, 2)
+        message +=  'Stock: ' + stock + '\n\n' + JSON.stringify(stockParams, null, 2)
         message += '\n\nBuying Price: R$ ' + buyingPrice + '\nStock Quantity: ' + stockQuantity
         message += '\nStarting Investment Value: R$ ' + (stockQuantity * buyingPrice).toFixed(2)
         message += isHourly ? '\nStarting Investment Value per Person: R$ ' + (stockQuantity * buyingPrice / 3).toFixed(2) : ''
@@ -62,8 +63,8 @@ function webCrawler(stocks, isHourly) {
     })
   }, function(){
     var data = {
-     from: 'Default User <postmaster@sandboxc746da069aca49db8e6b10a583928903.mailgun.org>',
-     to: ['guilherme.bertero@gmail.com'],
+     from: 'Bert\'s Automatic Stock Quotation <postmaster@sandboxc746da069aca49db8e6b10a583928903.mailgun.org>',
+     to: mailTo,
      subject: 'Atualização Cotação PETRE46 - ' + strftime("%Y-%m-%d", new Date()),
      text: message
     }
